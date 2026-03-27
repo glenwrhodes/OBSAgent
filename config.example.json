@@ -1,0 +1,17 @@
+{
+  "anthropic_api_key": "sk-ant-YOUR-KEY-HERE",
+  "obs_websocket": {
+    "host": "localhost",
+    "port": 4455,
+    "password": "your-obs-websocket-password"
+  },
+  "agent": {
+    "model": "claude-opus-4-6",
+    "max_tokens": 4096,
+    "max_iterations": 20
+  },
+  "server": {
+    "port": 5050,
+    "host": "127.0.0.1"
+  }
+}
