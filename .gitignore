@@ -1,4 +1,4 @@
-agent/config.json
+config.json
 agent/generated_images/
 __pycache__/
 *.pyc
