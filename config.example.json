@@ -1,5 +1,6 @@
 {
   "anthropic_api_key": "sk-ant-YOUR-KEY-HERE",
+  "openai_api_key": "sk-YOUR-OPENAI-KEY-HERE",
   "obs_websocket": {
     "host": "localhost",
     "port": 4455,

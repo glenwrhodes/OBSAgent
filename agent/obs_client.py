@@ -94,6 +94,11 @@ class OBSClient:
 
     # --- Sources / Scene Items ---
 
+    def get_input_kind_list(self) -> dict:
+        self.ensure_connected()
+        r = self._client.get_input_kind_list(False)
+        return {'inputKinds': sorted(r.input_kinds)}
+
     def get_scene_item_list(self, scene_name: str) -> list:
         self.ensure_connected()
         r = self._client.get_scene_item_list(scene_name)
@@ -102,11 +107,8 @@ class OBSClient:
     def create_input(self, scene_name: str, input_name: str, input_kind: str, input_settings: dict = None):
         self.ensure_connected()
         r = self._client.create_input(
-            scene_name=scene_name,
-            input_name=input_name,
-            input_kind=input_kind,
-            input_settings=input_settings or {},
-            scene_item_enabled=True
+            scene_name, input_name, input_kind,
+            input_settings or {}, True
         )
         return {'sceneItemId': r.scene_item_id}
 
@@ -165,9 +167,9 @@ class OBSClient:
     def set_input_volume(self, input_name: str, volume_db: float = None, volume_mul: float = None):
         self.ensure_connected()
         if volume_db is not None:
-            self._client.set_input_volume(input_name, input_volume_db=volume_db)
+            self._client.set_input_volume(input_name, vol_db=volume_db)
         elif volume_mul is not None:
-            self._client.set_input_volume(input_name, input_volume_mul=volume_mul)
+            self._client.set_input_volume(input_name, vol_mul=volume_mul)
         return {'set': input_name}
 
     def get_input_audio_monitor_type(self, input_name: str) -> str:

@@ -14,7 +14,7 @@ app = Flask(__name__, template_folder='../ui/templates', static_folder='../ui/st
 CORS(app)
 
 # Load config
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config.json')
 with open(CONFIG_PATH) as f:
     config = json.load(f)
 

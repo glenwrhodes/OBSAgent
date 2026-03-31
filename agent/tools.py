@@ -60,6 +60,11 @@ def get_all_tools() -> list:
 
         # --- Source / Scene item tools ---
         {
+            "name": "get_input_kind_list",
+            "description": "Get all available input kinds (source types) supported by this OBS installation. Always call this before add_source to discover the correct input_kind values — they vary between OBS versions and platforms.",
+            "input_schema": {"type": "object", "properties": {}, "required": []}
+        },
+        {
             "name": "get_scene_sources",
             "description": "List all sources (scene items) in a scene.",
             "input_schema": {
@@ -72,13 +77,13 @@ def get_all_tools() -> list:
         },
         {
             "name": "add_source",
-            "description": "Add a new source to a scene. input_kind options: 'monitor_capture' (screen capture), 'dshow_video' (webcam/capture card), 'image_source' (image), 'browser_source' (webpage/overlay), 'text_gdiplus_v3' (text on Windows), 'ffmpeg_source' (media file), 'wasapi_input_capture' (mic), 'wasapi_output_capture' (desktop audio).",
+            "description": "Add a new source to a scene. Use get_input_kind_list first to discover valid input_kind values for this OBS installation. Common kinds include monitor/window/game capture, video capture (webcam), image, browser, text, media, and audio sources — but exact names vary by OBS version.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "scene_name": {"type": "string"},
                     "source_name": {"type": "string", "description": "Name for the new source"},
-                    "input_kind": {"type": "string", "description": "OBS source type identifier"},
+                    "input_kind": {"type": "string", "description": "OBS source type identifier from get_input_kind_list"},
                     "settings": {"type": "object", "description": "Source-specific settings (optional)"}
                 },
                 "required": ["scene_name", "source_name", "input_kind"]
@@ -323,6 +328,37 @@ def get_all_tools() -> list:
             "input_schema": {"type": "object", "properties": {}, "required": []}
         },
 
+        # --- Image generation ---
+        {
+            "name": "generate_image",
+            "description": "Generate an image using AI (OpenAI gpt-image-1.5) and save it locally. Returns the absolute file path. Use this to create backgrounds, overlays, thumbnails, or any visual element, then add it to a scene with add_source using image_source kind with settings {'file': '<returned path>'}.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "Detailed description of the image to generate"},
+                    "size": {
+                        "type": "string",
+                        "description": "Image dimensions",
+                        "enum": ["1920x1080", "1024x1024", "1536x1024", "1024x1536"],
+                        "default": "1920x1080"
+                    },
+                    "quality": {
+                        "type": "string",
+                        "description": "Image quality level",
+                        "enum": ["low", "medium", "high"],
+                        "default": "high"
+                    },
+                    "background": {
+                        "type": "string",
+                        "description": "Background type. Use 'transparent' for overlays/logos, 'opaque' for backgrounds/full scenes.",
+                        "enum": ["opaque", "transparent"],
+                        "default": "opaque"
+                    }
+                },
+                "required": ["prompt"]
+            }
+        },
+
         # --- Utility ---
         {
             "name": "get_obs_stats",
@@ -332,8 +368,8 @@ def get_all_tools() -> list:
     ]
 
 
-def execute_tool(obs_client, tool_name: str, tool_input: dict):
-    """Route a tool call to the appropriate OBS client method"""
+def execute_tool(obs_client, tool_name: str, tool_input: dict, image_gen=None):
+    """Route a tool call to the appropriate OBS client method or image generator"""
     t = tool_name
 
     if t == "get_scene_list":
@@ -346,6 +382,8 @@ def execute_tool(obs_client, tool_name: str, tool_input: dict):
         return obs_client.remove_scene(tool_input["scene_name"])
     elif t == "rename_scene":
         return obs_client.set_scene_name(tool_input["old_name"], tool_input["new_name"])
+    elif t == "get_input_kind_list":
+        return obs_client.get_input_kind_list()
     elif t == "get_scene_sources":
         return obs_client.get_scene_item_list(tool_input["scene_name"])
     elif t == "add_source":
@@ -422,6 +460,15 @@ def execute_tool(obs_client, tool_name: str, tool_input: dict):
         return obs_client.start_virtual_cam()
     elif t == "stop_virtual_cam":
         return obs_client.stop_virtual_cam()
+    elif t == "generate_image":
+        if not image_gen:
+            raise RuntimeError("Image generation is not configured. Add 'openai_api_key' to config.json.")
+        return image_gen.generate(
+            prompt=tool_input["prompt"],
+            size=tool_input.get("size", "1920x1080"),
+            quality=tool_input.get("quality", "high"),
+            background=tool_input.get("background", "opaque"),
+        )
     elif t == "get_obs_stats":
         return obs_client.get_stats()
     else:

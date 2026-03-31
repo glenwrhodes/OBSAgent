@@ -5,6 +5,7 @@ Uses Claude with tool use to control OBS Studio
 
 import anthropic
 from obs_client import OBSClient
+from image_gen import ImageGenerator
 from tools import get_all_tools, execute_tool
 
 
@@ -13,6 +14,9 @@ class OBSAgent:
         self.config = config
         self.client = anthropic.Anthropic(api_key=config['anthropic_api_key'])
         self.obs_client = OBSClient(config['obs_websocket'])
+        self.image_gen = None
+        if config.get('openai_api_key'):
+            self.image_gen = ImageGenerator(api_key=config['openai_api_key'])
         self.model = config.get('agent', {}).get('model', 'claude-opus-4-6')
         self.max_tokens = config.get('agent', {}).get('max_tokens', 4096)
         self.max_iterations = config.get('agent', {}).get('max_iterations', 20)
@@ -27,10 +31,13 @@ You have direct control over OBS through a set of tools. When the user asks you 
 You can:
 - Create, switch, and manage scenes
 - Add, position, configure, and remove sources (screen capture, webcam, images, text, browser, audio)
+- Generate images with AI (backgrounds, overlays, logos, thumbnails) and add them to scenes
 - Control audio: volume, mute, filters (compressor, noise suppression, EQ, limiter, gain)
 - Manage filters on any source
 - Start/stop recording, streaming, and virtual camera
 - Read the current state of OBS (what scenes exist, what sources are active, current settings)
+
+Image workflow: use generate_image to create an image, then add_source with image_source kind and settings {"file": "<path>"} to place it in a scene. Use get_input_kind_list to discover the exact image source kind name.
 
 Guidelines:
 - When given a setup task, figure out the full picture before acting. Read existing state first.
@@ -40,7 +47,7 @@ Guidelines:
 - Keep responses concise — the user is in the middle of production work.
 - After executing a task, briefly confirm what you did.
 
-You're running locally. All data stays on the user's machine. No cloud calls except to Anthropic for reasoning."""
+You're running locally. All data stays on the user's machine. No cloud calls except to Anthropic for reasoning and OpenAI for image generation."""
 
     def run(self, message: str, history: list = None) -> dict:
         """Run the agent loop for a single user message"""
@@ -89,7 +96,7 @@ You're running locally. All data stays on the user's machine. No cloud calls exc
                 tool_input = tool_use.input
 
                 try:
-                    result = execute_tool(self.obs_client, tool_name, tool_input)
+                    result = execute_tool(self.obs_client, tool_name, tool_input, image_gen=self.image_gen)
                     tool_calls_log.append({
                         'tool': tool_name,
                         'input': tool_input,
